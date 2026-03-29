@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Journal audio local</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,ital,wght@9..144,1,300;9..144,1,400&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/styles.css?v=2026-03-29-12" />
+  </head>
+  <body>
+    <main class="studio-shell">
+      <header class="studio-topbar">
+        <div class="topbar-mark">
+          <div class="topbar-logo" aria-hidden="true">
+            <svg viewBox="0 0 52 48" role="presentation" focusable="false">
+              <circle cx="26" cy="24" r="16" class="topbar-logo__ring"></circle>
+              <rect x="18" y="15" width="3" height="18" rx="1.5" class="topbar-logo__bar"></rect>
+              <rect x="24.5" y="11" width="3" height="26" rx="1.5" class="topbar-logo__bar"></rect>
+              <rect x="31" y="17" width="3" height="14" rx="1.5" class="topbar-logo__bar"></rect>
+            </svg>
+          </div>
+        </div>
+
+        <div class="topbar-title-block">
+          <div class="topbar-title-line">
+            <h1><span>Journal</span> <strong>Audio</strong></h1>
+          </div>
+          <div class="topbar-models">
+            <span class="model-pill model-pill--inactive">
+              <span class="model-pill__dot"></span>
+              <span class="model-pill__label">ASR</span>
+              <span id="status-badge" class="model-pill__value">Inactif</span>
+            </span>
+            <span class="topbar-separator" aria-hidden="true"></span>
+            <span class="model-pill model-pill--inactive">
+              <span class="model-pill__dot"></span>
+              <span class="model-pill__label">SAVE</span>
+              <span id="last-save" class="model-pill__value">Aucune sauvegarde</span>
+            </span>
+          </div>
+        </div>
+
+        <div class="topbar-actions">
+          <button id="undo-version-btn" class="secondary topbar-button topbar-button--ghost" disabled>Retour</button>
+          <button id="redo-version-btn" class="secondary topbar-button topbar-button--ghost" disabled>Avancer</button>
+          <button id="clear-btn" class="secondary topbar-button topbar-button--outline" disabled>Effacer</button>
+          <button id="save-btn" class="primary topbar-button topbar-button--accent" disabled>Sauvegarder</button>
+        </div>
+      </header>
+
+      <aside class="studio-rail" aria-label="Navigation secondaire">
+        <button type="button" class="rail-icon is-active" title="Journal">◨</button>
+        <button type="button" class="rail-icon" title="Bibliothèque">◎</button>
+        <button type="button" class="rail-icon" title="Batch">⬒</button>
+        <button type="button" class="rail-icon" title="Enregistrement">●</button>
+        <div class="rail-spacer"></div>
+        <button type="button" class="rail-icon" title="Réglages">⚙</button>
+        <button type="button" class="rail-icon" title="Diagnostics">≣</button>
+      </aside>
+
+      <section class="editor-zone">
+        <section class="editor-workbench">
+          <header class="document-head">
+            <div class="document-head__main">
+              <h2 class="document-title">Sandbox</h2>
+              <div class="document-meta-line">
+                <span id="editor-hint" class="document-meta">Document de travail local</span>
+                <span class="document-meta-separator">·</span>
+                <span id="stats" class="document-meta mono">0 caractère · 0 mot</span>
+              </div>
+            </div>
+            <div class="document-head__side">
+              <input id="version-label" class="version-pill" type="text" value="Version source" readonly />
+            </div>
+          </header>
+
+          <section class="transform-toolbar" aria-label="Barre de transformation">
+            <div class="transform-toolbar__label">Transformer</div>
+            <div class="transform-toolbar__chips">
+              <button id="format-btn" class="transform-chip" disabled>Mise en forme</button>
+              <button id="rewrite-btn" class="transform-chip" disabled>Reformulation</button>
+              <label class="transform-chip transform-chip--toggle" for="include-summary-toggle">
+                <input id="include-summary-toggle" type="checkbox" />
+                <span>Résumé</span>
+              </label>
+            </div>
+            <div class="transform-toolbar__separator" aria-hidden="true"></div>
+            <div class="transform-toolbar__prompt">
+              <textarea id="ai-prompt" class="transform-prompt" rows="1" placeholder="Consigne libre pour traiter le texte courant avec l'IA"></textarea>
+              <button id="custom-transform-btn" class="transform-apply" disabled>Appliquer</button>
+            </div>
+          </section>
+
+          <div class="editor-surface">
+            <div class="editor-grid-shell">
+              <div class="editor-gutter" aria-hidden="true"></div>
+              <div id="editor" class="editor document-editor" contenteditable="true" spellcheck="false" aria-label="Zone de transcription"></div>
+            </div>
+          </div>
+
+          <footer class="version-timeline" aria-label="Timeline des versions">
+            <div class="version-timeline__label">Versions</div>
+            <div id="version-timeline" class="version-timeline__track" aria-live="polite">
+              <button type="button" class="timeline-node is-active">
+                <span class="timeline-node__dot"></span>
+                <span class="timeline-node__label">Source</span>
+              </button>
+            </div>
+          </footer>
+        </section>
+
+        <footer class="studio-footer">
+          <p id="feedback">Prêt à écouter le microphone en français.</p>
+        </footer>
+      </section>
+
+      <aside class="right-panel">
+        <div class="right-tabs" role="tablist" aria-label="Panneau droit">
+          <button type="button" class="right-tab is-active" data-panel-tab="recording" role="tab" aria-selected="true">Enreg.</button>
+          <button type="button" class="right-tab" data-panel-tab="library" role="tab" aria-selected="false">Biblio</button>
+          <button type="button" class="right-tab" data-panel-tab="batch" role="tab" aria-selected="false">Lot</button>
+          <button type="button" class="right-tab" data-panel-tab="logs" role="tab" aria-selected="false">Logs</button>
+        </div>
+
+        <div class="right-panel__content">
+          <section class="panel-stack panel-stack--active" data-panel="recording">
+            <section class="panel-card recording-card">
+              <div class="recording-orb-shell">
+                <button id="start-btn" class="recording-orb" disabled aria-label="Démarrer ou arrêter l'enregistrement">
+                  <span class="recording-orb__inner"></span>
+                </button>
+              </div>
+
+              <div class="recording-timer" id="recording-timer">00:00</div>
+              <p class="recording-hint">Cliquer pour démarrer</p>
+
+              <div class="recording-waveform" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+
+              <div class="recording-selectors">
+                <label class="field-block">
+                  <span class="field-block__label">Modèle Whisper</span>
+                  <select id="ollama-model-select" class="select-field" aria-label="Modèle de transcription" disabled>
+                    <option value="">Chargement…</option>
+                  </select>
+                </label>
+
+                <label class="field-block field-block--toggle" for="record-audio-toggle">
+                  <span class="field-block__label">Audio</span>
+                  <span class="field-inline">
+                    <input id="record-audio-toggle" type="checkbox" checked />
+                    <span>Enregistrer le son</span>
+                  </span>
+                </label>
+
+              </div>
+
+              <div class="recording-folder-actions">
+                <button id="open-history-btn" type="button" class="folder-chip">Output</button>
+                <button id="open-input-btn" type="button" class="folder-chip">Input</button>
+                <button id="open-trash-btn" type="button" class="folder-chip">Trash</button>
+              </div>
+
+              <div class="recording-status-line mono" id="ollama-status">Chargement des modèles…</div>
+            </section>
+          </section>
+
+          <section class="panel-stack" data-panel="library"></section>
+
+          <section class="panel-stack" data-panel="batch">
+            <section class="panel-card batch-card">
+              <div id="batch-drop-zone" class="batch-drop-zone" tabindex="0" role="button" aria-label="Déposer des fichiers audio ou vidéo">
+                <input id="batch-file-input" type="file" multiple hidden />
+                <div class="batch-drop-icon">⬆</div>
+                <p class="batch-drop-title">Déposez vos médias</p>
+                <p class="batch-drop-copy">Audio et vidéo acceptés, copiés vers Input.</p>
+              </div>
+              <div id="batch-queue" class="batch-queue" aria-live="polite"></div>
+            </section>
+          </section>
+
+          <section class="panel-stack" data-panel="logs">
+            <section class="panel-card hotwords-card">
+              <div class="field-block__label">Mots fréquents</div>
+              <textarea id="hotwords" class="hotwords-field" spellcheck="false" placeholder="Un mot par ligne…">Oren
+Baum
+ELO
+Silvie
+Emna
+Nafa
+Krishan
+Youssef
+Khadija
+Hoda
+Hoan
+Soufian
+Marouane
+Anas
+Ibrahim
+Omar
+Malak
+Armand
+Jullien
+Guillaume
+Sébastien
+Stéphane
+Victorien
+Pierre
+Marian
+Maxime
+Isabelle
+Jérémy
+Thierry
+Fayçal
+Guenael
+Imen
+Aurélien
+Aurélie
+Alain
+Vivien
+Malek</textarea>
+            </section>
+            <section class="panel-card logs-card" id="logs-shell">
+              <div id="debug-log-wrapper" class="debug-log-wrapper">
+                <div id="debug-log" class="debug-log" aria-live="polite"></div>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <section class="library-shell">
+          <div class="library-shell__label">Bibliothèque</div>
+          <div id="transcript-list" class="transcript-list" aria-live="polite"></div>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="/static/app.js?v=2026-03-29-12"></script>
+  </body>
+</html>

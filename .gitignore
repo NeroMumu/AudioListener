@@ -1,0 +1,25 @@
+# Dossiers de données locales
+Output/
+Input/
+Trash/
+.models/
+History/
+
+# Logs
+*.log
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
