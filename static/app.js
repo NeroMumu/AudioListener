@@ -6,6 +6,8 @@ const elements = {
   openInput: document.getElementById("open-input-btn"),
   openTrash: document.getElementById("open-trash-btn"),
   recordAudioToggle: document.getElementById("record-audio-toggle"),
+  ollamaModelSelects: Array.from(document.querySelectorAll('[data-role="ollama-model-select"]')),
+  ollamaStatusNodes: Array.from(document.querySelectorAll('[data-role="ollama-status"]')),
   ollamaModelSelect: document.getElementById("ollama-model-select"),
   ollamaStatus: document.getElementById("ollama-status"),
   formatBtn: document.getElementById("format-btn"),
@@ -36,6 +38,7 @@ const elements = {
   rightTabs: Array.from(document.querySelectorAll(".right-tab")),
   panelStacks: Array.from(document.querySelectorAll(".panel-stack")),
   waveformBars: Array.from(document.querySelectorAll(".recording-waveform span")),
+  transcriptLists: Array.from(document.querySelectorAll('[data-role="transcript-list"]')),
   transcriptList: document.getElementById("transcript-list"),
   batchDropZone: document.getElementById("batch-drop-zone"),
   batchFileInput: document.getElementById("batch-file-input"),
@@ -91,6 +94,31 @@ const AI_BODY_END_MARKER = "[[[AI_BODY_END]]]";
 
 function setFeedback(message) {
   elements.feedback.textContent = message;
+}
+
+function getSelectedTranscriptionModel() {
+  return elements.ollamaModelSelect?.value || "";
+}
+
+function syncOllamaModelSelects(selectedValue = "") {
+  const primarySelect = elements.ollamaModelSelect;
+  if (!primarySelect) {
+    return;
+  }
+
+  for (const select of elements.ollamaModelSelects) {
+    if (select !== primarySelect) {
+      select.innerHTML = primarySelect.innerHTML;
+    }
+
+    select.disabled = primarySelect.disabled;
+
+    if (selectedValue && Array.from(select.options).some((option) => option.value === selectedValue)) {
+      select.value = selectedValue;
+    } else if (select.options.length) {
+      select.value = select.options[0].value;
+    }
+  }
 }
 
 function setActivePanelTab(tabName) {
@@ -489,7 +517,9 @@ function formatDateTime(value) {
 }
 
 function setOllamaStatus(message) {
-  elements.ollamaStatus.textContent = message;
+  for (const node of elements.ollamaStatusNodes) {
+    node.textContent = message;
+  }
 }
 
 function setLogsCollapsed(collapsed) {
@@ -598,124 +628,94 @@ function renderBatchQueue(payload) {
 
 function renderTranscriptList(entries) {
   state.transcriptEntries = entries || [];
-  elements.transcriptList.innerHTML = "";
+  for (const transcriptList of elements.transcriptLists) {
+    transcriptList.innerHTML = "";
 
-  const sandboxVersion = getSandboxCurrentVersion();
-  const sandboxContent = sandboxVersion?.content?.trim() || "";
-  const sandboxIsActive = state.currentTranscriptFileName === null;
-  const sandboxItem = document.createElement("article");
-  sandboxItem.className = `transcript-entry transcript-entry--sandbox ${sandboxIsActive ? "is-active" : ""}`.trim();
+    const sandboxVersion = getSandboxCurrentVersion();
+    const sandboxContent = sandboxVersion?.content?.trim() || "";
+    const sandboxIsActive = state.currentTranscriptFileName === null;
+    const sandboxItem = document.createElement("article");
+    sandboxItem.className = `transcript-entry transcript-entry--sandbox ${sandboxIsActive ? "is-active" : ""}`.trim();
 
-  const sandboxHeader = document.createElement("div");
-  sandboxHeader.className = "transcript-entry-header";
+    const sandboxHeader = document.createElement("div");
+    sandboxHeader.className = "transcript-entry-header";
 
-  const sandboxLoadButton = document.createElement("button");
-  sandboxLoadButton.type = "button";
-  sandboxLoadButton.className = "transcript-entry-load";
+    const sandboxLoadButton = document.createElement("button");
+    sandboxLoadButton.type = "button";
+    sandboxLoadButton.className = "transcript-entry-load";
 
-  const sandboxName = document.createElement("span");
-  sandboxName.className = "transcript-entry-name";
-  sandboxName.textContent = "Sandbox";
+    const sandboxName = document.createElement("span");
+    sandboxName.className = "transcript-entry-name";
+    sandboxName.textContent = "Sandbox";
 
-  const sandboxMeta = document.createElement("span");
-  sandboxMeta.className = "transcript-entry-meta transcript-entry-meta--sandbox";
-  const sandboxMetaParts = [sandboxContent ? (state.sandboxIsDirty ? "Modifié" : "Propre") : "Vide"];
-  if (sandboxContent) {
-    sandboxMetaParts.push(`${sandboxContent.length} caractères`);
-  }
-  if (state.sandboxRecordingBaseName) {
-    sandboxMetaParts.push(state.sandboxRecordingBaseName);
-  }
-  sandboxMeta.textContent = sandboxMetaParts.join(" · ");
+    const sandboxMeta = document.createElement("span");
+    sandboxMeta.className = "transcript-entry-meta transcript-entry-meta--sandbox";
+    const sandboxMetaParts = [sandboxContent ? (state.sandboxIsDirty ? "Modifié" : "Propre") : "Vide"];
+    if (sandboxContent) {
+      sandboxMetaParts.push(`${sandboxContent.length} caractères`);
+    }
+    if (state.sandboxRecordingBaseName) {
+      sandboxMetaParts.push(state.sandboxRecordingBaseName);
+    }
+    sandboxMeta.textContent = sandboxMetaParts.join(" · ");
 
-  sandboxLoadButton.append(sandboxName, sandboxMeta);
-  sandboxLoadButton.addEventListener("click", async () => {
-    restoreSandboxWorkbench();
-    setFeedback("Sandbox chargé.");
-    await refreshTranscriptList();
-  });
-
-  const sandboxActions = document.createElement("div");
-  sandboxActions.className = "transcript-entry-actions";
-
-  if (sandboxContent) {
-    const sandboxSaveButton = document.createElement("button");
-    sandboxSaveButton.type = "button";
-    sandboxSaveButton.className = "icon-button is-primary";
-    sandboxSaveButton.title = "Sauvegarder le sandbox comme fichier";
-    sandboxSaveButton.textContent = "💾";
-    sandboxSaveButton.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      try {
-        restoreSandboxWorkbench();
-        await saveTranscript();
-      } catch (error) {
-        setStatus("error");
-        setFeedback(error.message || "Impossible de sauvegarder le sandbox.");
-      }
-    });
-    sandboxActions.appendChild(sandboxSaveButton);
-  }
-
-  sandboxHeader.append(sandboxLoadButton, sandboxActions);
-  sandboxItem.appendChild(sandboxHeader);
-  elements.transcriptList.appendChild(sandboxItem);
-
-  for (const entry of state.transcriptEntries) {
-    const item = document.createElement("article");
-    item.className = `transcript-entry ${state.currentTranscriptFileName === entry.file_name ? "is-active" : ""}`.trim();
-
-    const header = document.createElement("div");
-    header.className = "transcript-entry-header";
-
-    const loadButton = document.createElement("button");
-    loadButton.type = "button";
-    loadButton.className = "transcript-entry-load";
-
-    const name = document.createElement("span");
-    name.className = "transcript-entry-name";
-    name.textContent = entry.file_name;
-
-    const meta = document.createElement("span");
-    meta.className = "transcript-entry-meta";
-    meta.textContent = `Mis à jour : ${formatDateTime(entry.updated_at)}`;
-
-    loadButton.append(name, meta);
-    loadButton.addEventListener("click", async () => {
-      try {
-        syncSandboxStateFromCurrentWorkbench();
-        const payload = await fetchTranscriptContent(entry.file_name);
-        const resolvedContent = resolveLoadedTranscriptContent(
-          payload.content || "",
-          Boolean(elements.includeSummaryToggle?.checked),
-        );
-        if (elements.includeSummaryToggle) {
-          elements.includeSummaryToggle.checked = Boolean(resolvedContent.hasSummary && elements.includeSummaryToggle.checked);
-        }
-        state.currentTranscriptFileName = payload.file_name;
-        resetWorkbench(resolvedContent.editorContent || "", `Source · ${payload.file_name}`, "source");
-        setFeedback(`Transcription chargée : ${payload.file_name}`);
-        appendDebugLog(`Transcript chargé dans l'éditeur · ${payload.file_name}`, { source: "library" });
-        await refreshTranscriptList();
-      } catch (error) {
-        setStatus("error");
-        setFeedback(error.message || "Impossible de charger cette transcription.");
-      }
+    sandboxLoadButton.append(sandboxName, sandboxMeta);
+    sandboxLoadButton.addEventListener("click", async () => {
+      restoreSandboxWorkbench();
+      setFeedback("Sandbox chargé.");
+      await refreshTranscriptList();
     });
 
-    const actions = document.createElement("div");
-    actions.className = "transcript-entry-actions";
+    const sandboxActions = document.createElement("div");
+    sandboxActions.className = "transcript-entry-actions";
 
-    if (state.currentTranscriptFileName === entry.file_name) {
-      const updateButton = document.createElement("button");
-      updateButton.type = "button";
-      updateButton.className = "icon-button is-primary";
-      updateButton.title = "Mettre à jour le fichier avec l'édition en cours";
-      updateButton.textContent = "✎";
-      updateButton.addEventListener("click", async (event) => {
+    if (sandboxContent) {
+      const sandboxSaveButton = document.createElement("button");
+      sandboxSaveButton.type = "button";
+      sandboxSaveButton.className = "icon-button is-primary";
+      sandboxSaveButton.title = "Sauvegarder le sandbox comme fichier";
+      sandboxSaveButton.textContent = "💾";
+      sandboxSaveButton.addEventListener("click", async (event) => {
         event.stopPropagation();
         try {
-          const payload = await updateTranscriptContent(entry.file_name, getEditorText());
+          restoreSandboxWorkbench();
+          await saveTranscript();
+        } catch (error) {
+          setStatus("error");
+          setFeedback(error.message || "Impossible de sauvegarder le sandbox.");
+        }
+      });
+      sandboxActions.appendChild(sandboxSaveButton);
+    }
+
+    sandboxHeader.append(sandboxLoadButton, sandboxActions);
+    sandboxItem.appendChild(sandboxHeader);
+    transcriptList.appendChild(sandboxItem);
+
+    for (const entry of state.transcriptEntries) {
+      const item = document.createElement("article");
+      item.className = `transcript-entry ${state.currentTranscriptFileName === entry.file_name ? "is-active" : ""}`.trim();
+
+      const header = document.createElement("div");
+      header.className = "transcript-entry-header";
+
+      const loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.className = "transcript-entry-load";
+
+      const name = document.createElement("span");
+      name.className = "transcript-entry-name";
+      name.textContent = entry.file_name;
+
+      const meta = document.createElement("span");
+      meta.className = "transcript-entry-meta";
+      meta.textContent = `Mis à jour : ${formatDateTime(entry.updated_at)}`;
+
+      loadButton.append(name, meta);
+      loadButton.addEventListener("click", async () => {
+        try {
+          syncSandboxStateFromCurrentWorkbench();
+          const payload = await fetchTranscriptContent(entry.file_name);
           const resolvedContent = resolveLoadedTranscriptContent(
             payload.content || "",
             Boolean(elements.includeSummaryToggle?.checked),
@@ -724,23 +724,54 @@ function renderTranscriptList(entries) {
             elements.includeSummaryToggle.checked = Boolean(resolvedContent.hasSummary && elements.includeSummaryToggle.checked);
           }
           state.currentTranscriptFileName = payload.file_name;
-          resetWorkbench(resolvedContent.editorContent || "", `Source · ${payload.file_name}`, "update");
-          setFeedback(`Transcript mis à jour : ${payload.file_name}`);
-          appendDebugLog(`Transcript mis à jour · ${payload.file_name}`, { source: "library" });
+          resetWorkbench(resolvedContent.editorContent || "", `Source · ${payload.file_name}`, "source");
+          setFeedback(`Transcription chargée : ${payload.file_name}`);
+          appendDebugLog(`Transcript chargé dans l'éditeur · ${payload.file_name}`, { source: "library" });
           await refreshTranscriptList();
         } catch (error) {
           setStatus("error");
-          setFeedback(error.message || "Impossible de mettre à jour ce transcript.");
+          setFeedback(error.message || "Impossible de charger cette transcription.");
         }
       });
-      actions.appendChild(updateButton);
-    }
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "icon-button";
-    deleteButton.title = "Supprimer la transcription";
-    deleteButton.textContent = "🗑";
+      const actions = document.createElement("div");
+      actions.className = "transcript-entry-actions";
+
+      if (state.currentTranscriptFileName === entry.file_name) {
+        const updateButton = document.createElement("button");
+        updateButton.type = "button";
+        updateButton.className = "icon-button is-primary";
+        updateButton.title = "Mettre à jour le fichier avec l'édition en cours";
+        updateButton.textContent = "✎";
+        updateButton.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          try {
+            const payload = await updateTranscriptContent(entry.file_name, getEditorText());
+            const resolvedContent = resolveLoadedTranscriptContent(
+              payload.content || "",
+              Boolean(elements.includeSummaryToggle?.checked),
+            );
+            if (elements.includeSummaryToggle) {
+              elements.includeSummaryToggle.checked = Boolean(resolvedContent.hasSummary && elements.includeSummaryToggle.checked);
+            }
+            state.currentTranscriptFileName = payload.file_name;
+            resetWorkbench(resolvedContent.editorContent || "", `Source · ${payload.file_name}`, "update");
+            setFeedback(`Transcript mis à jour : ${payload.file_name}`);
+            appendDebugLog(`Transcript mis à jour · ${payload.file_name}`, { source: "library" });
+            await refreshTranscriptList();
+          } catch (error) {
+            setStatus("error");
+            setFeedback(error.message || "Impossible de mettre à jour ce transcript.");
+          }
+        });
+        actions.appendChild(updateButton);
+      }
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "icon-button";
+      deleteButton.title = "Supprimer la transcription";
+      deleteButton.textContent = "🗑";
       deleteButton.addEventListener("click", async (event) => {
         event.stopPropagation();
         try {
@@ -750,17 +781,18 @@ function renderTranscriptList(entries) {
           }
           setFeedback(`Transcript supprimé : ${entry.file_name}`);
           appendDebugLog(`Transcript supprimé · ${entry.file_name}`, { source: "library" });
-        await refreshTranscriptList();
-      } catch (error) {
-        setStatus("error");
-        setFeedback(error.message || "Impossible de supprimer ce transcript.");
-      }
-    });
-    actions.appendChild(deleteButton);
+          await refreshTranscriptList();
+        } catch (error) {
+          setStatus("error");
+          setFeedback(error.message || "Impossible de supprimer ce transcript.");
+        }
+      });
+      actions.appendChild(deleteButton);
 
-    header.append(loadButton, actions);
-    item.appendChild(header);
-    elements.transcriptList.appendChild(item);
+      header.append(loadButton, actions);
+      item.appendChild(header);
+      transcriptList.appendChild(item);
+    }
   }
 }
 
@@ -933,7 +965,7 @@ function updateStats() {
 
 function refreshButtons() {
   const hasContent = getEditorText().trim().length > 0;
-  const hasTranscriptionModel = Boolean(elements.ollamaModelSelect.value);
+  const hasTranscriptionModel = Boolean(getSelectedTranscriptionModel());
   const hasCustomPrompt = Boolean(elements.aiPrompt?.value?.trim());
   elements.start.disabled = state.isStarting || !hasTranscriptionModel;
   elements.start.setAttribute("aria-label", state.isListening ? "Arrêter l'enregistrement" : "Démarrer l'enregistrement");
@@ -1508,6 +1540,7 @@ async function stopMicrophone() {
 
 async function loadOllamaModels() {
   elements.ollamaModelSelect.disabled = true;
+  syncOllamaModelSelects();
   setOllamaStatus("Chargement des modèles de transcription…");
 
   try {
@@ -1526,6 +1559,7 @@ async function loadOllamaModels() {
       option.textContent = "Aucun modèle disponible";
       elements.ollamaModelSelect.appendChild(option);
       elements.ollamaModelSelect.disabled = true;
+      syncOllamaModelSelects();
       setOllamaStatus("Aucun modèle de transcription disponible.");
       appendDebugLog("Aucun modèle de transcription détecté par le backend");
       refreshButtons();
@@ -1541,6 +1575,7 @@ async function loadOllamaModels() {
 
     elements.ollamaModelSelect.value = payload.current_model || payload.models[0];
     elements.ollamaModelSelect.disabled = false;
+    syncOllamaModelSelects(elements.ollamaModelSelect.value);
     try {
       const ollamaResponse = await fetch("/api/ollama/models");
       if (!ollamaResponse.ok) {
@@ -1550,11 +1585,11 @@ async function loadOllamaModels() {
       const ollamaPayload = await ollamaResponse.json();
       state.workbenchModelName = ollamaPayload.default_model || null;
       setOllamaStatus(
-        `Whisper : ${elements.ollamaModelSelect.value} · Ollama : ${state.workbenchModelName || "aucun modèle local"}`
+        `Whisper : ${getSelectedTranscriptionModel()} · Ollama : ${state.workbenchModelName || "aucun modèle local"}`
       );
     } catch (error) {
       state.workbenchModelName = null;
-      setOllamaStatus(`Whisper : ${elements.ollamaModelSelect.value} · Ollama indisponible`);
+      setOllamaStatus(`Whisper : ${getSelectedTranscriptionModel()} · Ollama indisponible`);
       appendDebugLog(`Échec du chargement des modèles Ollama : ${error.message || error}`, { source: "ollama", level: "ERROR" });
     }
     appendDebugLog(`Modèles de transcription chargés · ${payload.models.join(", ")}`);
@@ -1565,6 +1600,7 @@ async function loadOllamaModels() {
     option.textContent = "Modèles indisponibles";
     elements.ollamaModelSelect.appendChild(option);
     elements.ollamaModelSelect.disabled = true;
+    syncOllamaModelSelects();
     setOllamaStatus(error.message || "Modèles de transcription indisponibles.");
     appendDebugLog(`Échec du chargement des modèles de transcription : ${error.message || error}`);
   }
@@ -1578,23 +1614,24 @@ async function startListening() {
   }
 
   try {
+    const selectedModel = getSelectedTranscriptionModel();
     state.isStarting = true;
     state.isListening = false;
     updateRecordingVisualState();
     refreshButtons();
     setStatus("inactive");
-    setFeedback(`Préparation du modèle ${elements.ollamaModelSelect.value}…`);
-    appendDebugLog(`Démarrage demandé · chargement du modèle ${elements.ollamaModelSelect.value}`);
+    setFeedback(`Préparation du modèle ${selectedModel}…`);
+    appendDebugLog(`Démarrage demandé · chargement du modèle ${selectedModel}`);
 
     await startMicrophone();
     removePartial();
     state.pendingStart = createDeferred();
-    state.ws.send(JSON.stringify({ type: "start", model: elements.ollamaModelSelect.value || undefined }));
+    state.ws.send(JSON.stringify({ type: "start", model: selectedModel || undefined }));
     await state.pendingStart.promise;
     setFeedback(
       elements.recordAudioToggle.checked
-        ? `Microphone actif, modèle ${elements.ollamaModelSelect.value}, et son enregistré.`
-        : `Microphone actif avec le modèle ${elements.ollamaModelSelect.value}.`
+        ? `Microphone actif, modèle ${selectedModel}, et son enregistré.`
+        : `Microphone actif avec le modèle ${selectedModel}.`
     );
     startRecordingVisuals();
     refreshButtons();
@@ -1927,13 +1964,20 @@ elements.batchDropZone?.addEventListener("drop", async (event) => {
   }
 });
 
-elements.ollamaModelSelect.addEventListener("change", () => {
-  if (elements.ollamaModelSelect.value) {
-    setOllamaStatus(`Whisper : ${elements.ollamaModelSelect.value} · Ollama : ${state.workbenchModelName || "inconnu"}`);
-    appendDebugLog(`Modèle de transcription sélectionné : ${elements.ollamaModelSelect.value}`);
-  }
-  refreshButtons();
-});
+for (const select of elements.ollamaModelSelects) {
+  select.addEventListener("change", (event) => {
+    const selectedValue = event.currentTarget.value || "";
+    if (elements.ollamaModelSelect && event.currentTarget !== elements.ollamaModelSelect) {
+      elements.ollamaModelSelect.value = selectedValue;
+    }
+    syncOllamaModelSelects(selectedValue);
+    if (selectedValue) {
+      setOllamaStatus(`Whisper : ${selectedValue} · Ollama : ${state.workbenchModelName || "inconnu"}`);
+      appendDebugLog(`Modèle de transcription sélectionné : ${selectedValue}`);
+    }
+    refreshButtons();
+  });
+}
 
 elements.recordAudioToggle.addEventListener("change", () => {
   appendDebugLog(

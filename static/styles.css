@@ -66,10 +66,11 @@ p {
 }
 
 .studio-shell {
-  width: 100%;
+  width: min(1500px, calc(100vw - 24px));
   min-height: 100vh;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) 260px;
+  grid-template-columns: 52px minmax(0, 1fr) 520px;
   grid-template-rows: 48px minmax(0, 1fr);
   background: var(--bg);
 }
@@ -582,14 +583,15 @@ button:disabled {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  overflow: hidden;
   border-left: 1.5px solid var(--border2);
   background: var(--bg);
 }
 
 .right-tabs {
+  order: 1;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   border-bottom: 1.5px solid var(--border);
 }
 
@@ -616,10 +618,11 @@ button:disabled {
 }
 
 .right-panel__content {
+  order: 3;
   flex: 1;
   min-height: 0;
   padding: 12px;
-  overflow-x: hidden;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -636,14 +639,18 @@ button:disabled {
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: 16px;
+  min-height: 0;
   padding: 16px;
   box-shadow: var(--shadow);
 }
 
 .recording-card {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 14px;
   align-content: start;
+  overflow: auto;
 }
 
 .recording-orb-shell {
@@ -734,6 +741,10 @@ button:disabled {
   gap: 10px;
 }
 
+.recording-model-field {
+  margin-top: 2px;
+}
+
 .field-block {
   display: grid;
   gap: 6px;
@@ -752,6 +763,7 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
   border-radius: 10px;
   border: 1px solid var(--border2);
   background: var(--card);
@@ -799,10 +811,16 @@ button:disabled {
 }
 
 .library-shell {
-  padding: 12px;
-  border-top: 1px solid var(--border);
+  margin-top: 0;
+  min-height: 0;
   display: grid;
   gap: 10px;
+}
+
+.library-shell--batch,
+.library-shell--recording {
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
 }
 
 .right-panel:has(.panel-stack[data-panel="logs"].panel-stack--active) .library-shell {
@@ -815,6 +833,21 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow: hidden;
+}
+
+.panel-stack[data-panel="recording"].panel-stack--active {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-stack[data-panel="batch"].panel-stack--active {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .library-shell__label {
@@ -853,6 +886,7 @@ button:disabled {
   gap: 4px;
   align-content: start;
   overflow: auto;
+  max-height: 320px;
 }
 
 .transcript-list:empty::before {
@@ -979,9 +1013,16 @@ button:disabled {
 }
 
 .batch-card {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 12px;
   align-content: start;
+  overflow: auto;
+}
+
+.batch-model-field {
+  margin-top: 2px;
 }
 
 .logs-card {
@@ -989,6 +1030,7 @@ button:disabled {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .batch-drop-zone {
@@ -1086,6 +1128,7 @@ button:disabled {
 .debug-log-wrapper {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .debug-log {
@@ -1101,6 +1144,8 @@ button:disabled {
 
 .debug-line {
   color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .debug-line[data-level="ERROR"] {
@@ -1145,7 +1190,7 @@ button:disabled {
   50% { transform: scale(1.03); }
 }
 
-@media (max-width: 1240px) {
+@media (max-width: 1500px) {
   .studio-shell {
     grid-template-columns: 52px minmax(0, 1fr);
     grid-template-rows: 48px minmax(0, 1fr) auto;

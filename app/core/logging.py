@@ -47,9 +47,10 @@ def configure_logging(log_file: Path, level_name: str = "INFO") -> None:
     root_logger.addHandler(event_handler)
     root_logger._audio_listener_logging_configured = True  # type: ignore[attr-defined]
 
-    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi", "faster_whisper"):
         logger = logging.getLogger(logger_name)
         logger.handlers.clear()
         logger.propagate = True
 
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("faster_whisper").setLevel(logging.WARNING)

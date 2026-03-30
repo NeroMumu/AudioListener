@@ -119,7 +119,6 @@
       <aside class="right-panel">
         <div class="right-tabs" role="tablist" aria-label="Panneau droit">
           <button type="button" class="right-tab is-active" data-panel-tab="recording" role="tab" aria-selected="true">Enreg.</button>
-          <button type="button" class="right-tab" data-panel-tab="library" role="tab" aria-selected="false">Biblio</button>
           <button type="button" class="right-tab" data-panel-tab="batch" role="tab" aria-selected="false">Lot</button>
           <button type="button" class="right-tab" data-panel-tab="logs" role="tab" aria-selected="false">Logs</button>
         </div>
@@ -146,9 +145,9 @@
               </div>
 
               <div class="recording-selectors">
-                <label class="field-block">
+                <label class="field-block recording-model-field">
                   <span class="field-block__label">Modèle Whisper</span>
-                  <select id="ollama-model-select" class="select-field" aria-label="Modèle de transcription" disabled>
+                  <select class="select-field" data-role="ollama-model-select" aria-label="Modèle de transcription" disabled>
                     <option value="">Chargement…</option>
                   </select>
                 </label>
@@ -169,11 +168,14 @@
                 <button id="open-trash-btn" type="button" class="folder-chip">Trash</button>
               </div>
 
-              <div class="recording-status-line mono" id="ollama-status">Chargement des modèles…</div>
+              <div class="recording-status-line mono" data-role="ollama-status">Chargement des modèles…</div>
+
+              <section class="library-shell library-shell--recording">
+                <div class="library-shell__label">Bibliothèque</div>
+                <div class="transcript-list" data-role="transcript-list" aria-live="polite"></div>
+              </section>
             </section>
           </section>
-
-          <section class="panel-stack" data-panel="library"></section>
 
           <section class="panel-stack" data-panel="batch">
             <section class="panel-card batch-card">
@@ -183,7 +185,18 @@
                 <p class="batch-drop-title">Déposez vos médias</p>
                 <p class="batch-drop-copy">Audio et vidéo acceptés, copiés vers Input.</p>
               </div>
+              <label class="field-block batch-model-field">
+                <span class="field-block__label">Modèle Whisper</span>
+                <select id="ollama-model-select" class="select-field" data-role="ollama-model-select" aria-label="Modèle de transcription" disabled>
+                  <option value="">Chargement…</option>
+                </select>
+              </label>
+              <div class="recording-status-line mono" id="ollama-status" data-role="ollama-status">Chargement des modèles…</div>
               <div id="batch-queue" class="batch-queue" aria-live="polite"></div>
+              <section class="library-shell library-shell--batch">
+                <div class="library-shell__label">Bibliothèque</div>
+                <div id="transcript-list" class="transcript-list" data-role="transcript-list" aria-live="polite"></div>
+              </section>
             </section>
           </section>
 
@@ -236,10 +249,6 @@ Malek</textarea>
           </section>
         </div>
 
-        <section class="library-shell">
-          <div class="library-shell__label">Bibliothèque</div>
-          <div id="transcript-list" class="transcript-list" aria-live="polite"></div>
-        </section>
       </aside>
     </main>
 

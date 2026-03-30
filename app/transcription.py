@@ -104,6 +104,16 @@ class TranscriptionEngine:
         if debug_callback is not None:
             await debug_callback(message)
 
+    def _format_transcript_debug_message(self, prefix: str, text: str, max_length: int = 140) -> str:
+        compact_text = " ".join(text.split())
+        if len(compact_text) <= max_length:
+            return f"{prefix} : {compact_text}"
+
+        preview = compact_text[: max_length - 1].rstrip()
+        if " " in preview:
+            preview = preview.rsplit(" ", 1)[0]
+        return f"{prefix} : {preview}…"
+
     async def process_audio_bytes(
         self,
         session: SessionState,
@@ -142,7 +152,10 @@ class TranscriptionEngine:
                 partial_text = await self._transcribe_current_buffer(session)
                 if partial_text and partial_text != session.last_partial_text:
                     session.last_partial_text = partial_text
-                    await self._emit_debug(debug_callback, f"Partiel : {partial_text}")
+                    await self._emit_debug(
+                        debug_callback,
+                        self._format_transcript_debug_message("Partiel", partial_text),
+                    )
                     events.append(
                         {
                             "type": "partial",
@@ -160,7 +173,10 @@ class TranscriptionEngine:
                 )
                 final_text = await self._transcribe_current_buffer(session)
                 if final_text:
-                    await self._emit_debug(debug_callback, f"Final : {final_text}")
+                    await self._emit_debug(
+                        debug_callback,
+                        self._format_transcript_debug_message("Final", final_text),
+                    )
                     events.append(
                         {
                             "type": "final",
@@ -180,7 +196,10 @@ class TranscriptionEngine:
         final_text = await self._transcribe_current_buffer(session)
         events: list[dict[str, str]] = []
         if final_text:
-            await self._emit_debug(debug_callback, f"Final : {final_text}")
+            await self._emit_debug(
+                debug_callback,
+                self._format_transcript_debug_message("Final", final_text),
+            )
             events.append(
                 {
                     "type": "final",
